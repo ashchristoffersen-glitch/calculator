@@ -177,10 +177,76 @@
     .view.active { display: flex; }
 
     /* ===== Game ===== */
+    .game-screen {
+      display: none;
+      flex: 1 1 auto;
+      flex-direction: column;
+      gap: var(--gap);
+      min-height: 0;
+    }
+    .game-screen.active { display: flex; }
+
+    .menu-title {
+      flex: 0 0 auto;
+      margin: 0;
+      text-align: center;
+      color: #fff;
+      font-size: clamp(22px, 5vmin, 40px);
+      text-shadow: 0 3px 0 rgba(0,0,0,0.18);
+    }
+    .mode-grid {
+      flex: 1 1 auto;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      grid-auto-rows: 1fr;
+      gap: var(--gap);
+      min-height: 0;
+    }
+    .mode-btn {
+      border: none;
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-weight: bold;
+      font-size: clamp(20px, 4.5vmin, 36px);
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 7px 0 rgba(0,0,0,0.22);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.2em;
+      transition: transform 0.05s ease, box-shadow 0.05s ease;
+      touch-action: manipulation;
+    }
+    .mode-btn:active { transform: translateY(5px); box-shadow: 0 2px 0 rgba(0,0,0,0.22); }
+    .mode-btn .mico { font-size: 1.6em; line-height: 1; }
+    .mode-plus   { background: #ff5d8f; }
+    .mode-minus  { background: #3a86ff; }
+    .mode-times  { background: #8338ec; }
+    .mode-divide { background: #06d6a0; color: #053a2c; }
+    .mode-mixed  { background: #fb8500; grid-column: span 2; }
+
+    .small-btn {
+      border: none;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.8);
+      color: #5b3aa6;
+      font-family: inherit;
+      font-weight: bold;
+      font-size: clamp(13px, 2.4vmin, 20px);
+      padding: 0.4em 0.9em;
+      cursor: pointer;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.18);
+      touch-action: manipulation;
+    }
+
     .game-bar {
       flex: 0 0 auto;
       display: flex;
-      justify-content: center;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--gap);
     }
     .game-mode-label {
       color: #fff;
@@ -270,25 +336,42 @@
 
     <!-- ===== Game view ===== -->
     <section id="gameView" class="view">
-      <div class="game-bar">
-        <div class="game-mode-label">Plus ➕</div>
+
+      <!-- Mode select -->
+      <div id="gameMenu" class="game-screen active">
+        <h2 class="menu-title">Pick a game! 🎲</h2>
+        <div class="mode-grid">
+          <button class="mode-btn mode-plus" data-mode="plus"><span class="mico">➕</span><span>Plus</span></button>
+          <button class="mode-btn mode-minus" data-mode="minus"><span class="mico">➖</span><span>Minus</span></button>
+          <button class="mode-btn mode-times" data-mode="times"><span class="mico">✖️</span><span>Times</span></button>
+          <button class="mode-btn mode-divide" data-mode="divide"><span class="mico">➗</span><span>Divide</span></button>
+          <button class="mode-btn mode-mixed" data-mode="mixed"><span class="mico">🎲</span><span>Mixed</span></button>
+        </div>
       </div>
-      <div id="equation" class="equation">– + – = –</div>
-      <div id="feedback" class="feedback">&nbsp;</div>
-      <div class="gkeys">
-        <button class="key num gnum" data-gnum="7">7</button>
-        <button class="key num gnum" data-gnum="8">8</button>
-        <button class="key num gnum" data-gnum="9">9</button>
-        <button class="key num gnum" data-gnum="4">4</button>
-        <button class="key num gnum" data-gnum="5">5</button>
-        <button class="key num gnum" data-gnum="6">6</button>
-        <button class="key num gnum" data-gnum="1">1</button>
-        <button class="key num gnum" data-gnum="2">2</button>
-        <button class="key num gnum" data-gnum="3">3</button>
-        <button class="key fn" data-gaction="back">⌫</button>
-        <button class="key num gnum" data-gnum="0">0</button>
-        <button class="key fn" data-gaction="clear">C</button>
-        <button class="key eq gcheck span3" data-gaction="check">Check ✓</button>
+
+      <!-- Play -->
+      <div id="gamePlay" class="game-screen">
+        <div class="game-bar">
+          <button class="small-btn" data-gaction="menu">⬅ Modes</button>
+          <div class="game-mode-label" id="modeLabel">Plus ➕</div>
+        </div>
+        <div id="equation" class="equation">– + – = –</div>
+        <div id="feedback" class="feedback">&nbsp;</div>
+        <div class="gkeys">
+          <button class="key num gnum" data-gnum="7">7</button>
+          <button class="key num gnum" data-gnum="8">8</button>
+          <button class="key num gnum" data-gnum="9">9</button>
+          <button class="key num gnum" data-gnum="4">4</button>
+          <button class="key num gnum" data-gnum="5">5</button>
+          <button class="key num gnum" data-gnum="6">6</button>
+          <button class="key num gnum" data-gnum="1">1</button>
+          <button class="key num gnum" data-gnum="2">2</button>
+          <button class="key num gnum" data-gnum="3">3</button>
+          <button class="key fn" data-gaction="back">⌫</button>
+          <button class="key num gnum" data-gnum="0">0</button>
+          <button class="key fn" data-gaction="clear">C</button>
+          <button class="key eq gcheck span3" data-gaction="check">Check ✓</button>
+        </div>
       </div>
     </section>
   </div>
@@ -555,10 +638,18 @@
     const feedbackEl = document.getElementById('feedback');
 
     const gameState = {
-      mode: 'plus',     // CP5: Plus only
-      level: 2,         // default level for now
+      mode: 'plus',     // plus | minus | times | divide | mixed
+      level: 2,         // default level for now (Settings comes in CP7)
       q: null,          // current question
       input: ''         // the digits the child has typed
+    };
+
+    const MODE_META = {
+      plus:   { label: 'Plus ➕' },
+      minus:  { label: 'Minus ➖' },
+      times:  { label: 'Times ✖️' },
+      divide: { label: 'Divide ➗' },
+      mixed:  { label: 'Mixed 🎲' }
     };
 
     function randInt(min, max) {
@@ -569,16 +660,65 @@
     const ADD_RANGE = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000];
     function addRange(level) { return ADD_RANGE[level - 1] || 20; }
 
-    // Build a Plus question: a + b = result, with one part missing.
+    // × and ÷ factor ranges per level: [aMin, aMax, bMin, bMax].
+    const FACTOR_RANGE = [
+      [1, 5, 1, 5],        // L1: factors 1–5
+      [1, 10, 1, 10],      // L2: factors 1–10
+      [1, 12, 1, 12],      // L3: factors 1–12
+      [10, 99, 1, 9],      // L4: 2-digit × 1-digit
+      [10, 99, 1, 9],      // L5: 2-digit × 1-digit
+      [10, 99, 10, 99],    // L6: 2-digit × 2-digit
+      [10, 99, 10, 99],    // L7: 2-digit × 2-digit
+      [100, 999, 1, 9],    // L8: 3-digit × 1-digit
+      [100, 999, 10, 99],  // L9: 3-digit × 2-digit
+      [100, 999, 10, 99]   // L10: 3-digit × 2-digit
+    ];
+    function factorRange(level) { return FACTOR_RANGE[level - 1] || FACTOR_RANGE[1]; }
+
+    // Each generator returns { op, a, b, result } where a op b = result always holds.
     function generatePlus(level) {
       const max = addRange(level);
       const a = randInt(1, max);
       const b = randInt(1, max);
       return { op: '+', a: a, b: b, result: a + b };
     }
+    // Subtraction never goes negative: big − small = result (≥ 0).
+    function generateMinus(level) {
+      const max = addRange(level);
+      let a = randInt(1, max);
+      let b = randInt(1, max);
+      if (b > a) { const t = a; a = b; b = t; }
+      return { op: '−', a: a, b: b, result: a - b };
+    }
+    function generateTimes(level) {
+      const r = factorRange(level);
+      const a = randInt(r[0], r[1]);
+      const b = randInt(r[2], r[3]);
+      return { op: '×', a: a, b: b, result: a * b };
+    }
+    // Division is the reverse of a multiplication, so it's always even.
+    function generateDivide(level) {
+      const r = factorRange(level);
+      const quotient = randInt(r[0], r[1]);
+      const divisor = randInt(Math.max(1, r[2]), r[3]);  // never divide by zero
+      const dividend = quotient * divisor;
+      return { op: '÷', a: dividend, b: divisor, result: quotient };
+    }
+
+    const GENERATORS = {
+      plus: generatePlus, minus: generateMinus, times: generateTimes, divide: generateDivide
+    };
+
+    function generateFor(mode, level) {
+      if (mode === 'mixed') {
+        const pick = ['plus', 'minus', 'times', 'divide'][randInt(0, 3)];
+        return GENERATORS[pick](level);
+      }
+      return GENERATORS[mode](level);
+    }
 
     function newQuestion() {
-      const q = generatePlus(gameState.level);   // CP5: Plus only
+      const q = generateFor(gameState.mode, gameState.level);
       q.missing = ['a', 'b', 'result'][randInt(0, 2)];  // first / middle / result
       gameState.q = q;
       gameState.input = '';
@@ -638,7 +778,23 @@
         else if (btn.dataset.gaction === 'back') { playTap('back'); gBackspace(); }
         else if (btn.dataset.gaction === 'clear') { playTap('fn'); gClearInput(); }
         else if (btn.dataset.gaction === 'check') { gCheck(); }
+        else if (btn.dataset.gaction === 'menu') { playTap('fn'); showGameScreen('menu'); }
       });
+    });
+
+    // ----- Game screens (mode select <-> play) -----
+    function showGameScreen(name) {
+      document.getElementById('gameMenu').classList.toggle('active', name === 'menu');
+      document.getElementById('gamePlay').classList.toggle('active', name === 'play');
+    }
+    function startMode(mode) {
+      gameState.mode = mode;
+      document.getElementById('modeLabel').textContent = MODE_META[mode].label;
+      showGameScreen('play');
+      newQuestion();
+    }
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => { getAudio(); playTap('op'); startMode(btn.dataset.mode); });
     });
 
     // ----- View navigation (Calculator <-> Game) -----
@@ -646,7 +802,7 @@
       document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
       document.getElementById('calcView').classList.toggle('active', view === 'calc');
       document.getElementById('gameView').classList.toggle('active', view === 'game');
-      if (view === 'game' && !gameState.q) newQuestion();
+      if (view === 'game') showGameScreen('menu');  // always start at the mode picker
     }
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => { getAudio(); showView(tab.dataset.view); });
