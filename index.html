@@ -93,6 +93,19 @@
       transform: translateY(5px);
       box-shadow: 0 2px 0 rgba(0,0,0,0.22);
     }
+    /* Bounce/wiggle when tapped */
+    @keyframes pop {
+      0%   { transform: scale(1); }
+      30%  { transform: scale(1.18) rotate(-4deg); }
+      60%  { transform: scale(0.94) rotate(3deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+    button.key.pop {
+      animation: pop 0.32s ease;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      button.key.pop { animation: none; }
+    }
     /* Number keys */
     .num { background: #ffb703; color: #4a2e00; }
     .num:active { background: #ffc733; }
@@ -259,13 +272,60 @@
       showingResult = true;
     }
 
+    // ----- Sounds (Web Audio API, generated in-browser, lightweight) -----
+    let audioCtx = null;
+    function getAudio() {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) audioCtx = new AC();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+    // A single short, soft note.
+    function playNote(freq, startOffset, duration, type, peak) {
+      const ctx = getAudio();
+      if (!ctx) return;
+      const t0 = ctx.currentTime + (startOffset || 0);
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      const vol = (peak === undefined ? 0.18 : peak);
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t0);
+      osc.stop(t0 + duration + 0.02);
+    }
+    // Cheerful "boop" for taps; pitch varies a little by key type.
+    function playTap(kind) {
+      const freqs = { num: 660, op: 540, fn: 420, back: 360 };
+      playNote(freqs[kind] || 600, 0, 0.12, 'triangle', 0.16);
+    }
+    // Happy ascending arpeggio for "=".
+    function playHappy() {
+      const notes = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6
+      notes.forEach((f, i) => playNote(f, i * 0.09, 0.22, 'triangle', 0.2));
+    }
+
+    function bounce(btn) {
+      btn.classList.remove('pop');
+      // Force reflow so the animation can restart on rapid taps.
+      void btn.offsetWidth;
+      btn.classList.add('pop');
+    }
+
     document.querySelectorAll('.key').forEach(btn => {
+      btn.addEventListener('animationend', () => btn.classList.remove('pop'));
       btn.addEventListener('click', () => {
-        if (btn.dataset.num !== undefined) inputNumber(btn.dataset.num);
-        else if (btn.dataset.op !== undefined) inputOperator(btn.dataset.op);
-        else if (btn.dataset.action === 'clear') reset();
-        else if (btn.dataset.action === 'back') backspace();
-        else if (btn.dataset.action === 'equals') equals();
+        bounce(btn);
+        if (btn.dataset.num !== undefined) { playTap('num'); inputNumber(btn.dataset.num); }
+        else if (btn.dataset.op !== undefined) { playTap('op'); inputOperator(btn.dataset.op); }
+        else if (btn.dataset.action === 'clear') { playTap('fn'); reset(); }
+        else if (btn.dataset.action === 'back') { playTap('back'); backspace(); }
+        else if (btn.dataset.action === 'equals') { playHappy(); equals(); }
       });
     });
 
