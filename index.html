@@ -296,6 +296,67 @@
     .gcheck { background: #06d6a0; color: #053a2c; }
     .gcheck:active { background: #2ee3b6; }
     .span3 { grid-column: span 3; }
+
+    /* ===== Settings ===== */
+    #settingsView { justify-content: flex-start; }
+    .settings-card {
+      background: rgba(255,255,255,0.95);
+      border-radius: var(--radius);
+      padding: clamp(16px, 4vmin, 36px);
+      box-shadow: 0 8px 0 rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: clamp(12px, 3vmin, 26px);
+    }
+    .settings-label {
+      font-size: clamp(20px, 4vmin, 32px);
+      font-weight: bold;
+      color: #5b3aa6;
+      text-align: center;
+    }
+    .level-stepper {
+      display: flex;
+      align-items: center;
+      gap: clamp(16px, 4vmin, 40px);
+    }
+    .step-btn {
+      border: none;
+      border-radius: 50%;
+      width: clamp(64px, 14vmin, 110px);
+      height: clamp(64px, 14vmin, 110px);
+      font-size: clamp(36px, 8vmin, 64px);
+      font-weight: bold;
+      color: #fff;
+      background: #ff5d8f;
+      cursor: pointer;
+      box-shadow: 0 6px 0 rgba(0,0,0,0.2);
+      touch-action: manipulation;
+    }
+    .step-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+    .step-btn:disabled { background: #c9c1d6; box-shadow: 0 6px 0 rgba(0,0,0,0.12); cursor: default; }
+    .level-value {
+      font-size: clamp(60px, 16vmin, 130px);
+      font-weight: bold;
+      color: #06d6a0;
+      min-width: 1.6em;
+      text-align: center;
+      line-height: 1;
+    }
+    #levelSlider {
+      width: 100%;
+      max-width: 460px;
+      height: clamp(18px, 4vmin, 30px);
+      accent-color: #8338ec;
+      cursor: pointer;
+    }
+    .level-hint { color: #8a7fa6; font-size: clamp(14px, 2.6vmin, 20px); }
+    .level-range {
+      color: #d6336c;
+      font-weight: bold;
+      font-size: clamp(15px, 2.8vmin, 22px);
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -303,6 +364,7 @@
     <nav id="topnav">
       <button class="tab active" data-view="calc">🧮 Calculator</button>
       <button class="tab" data-view="game">🎮 Game</button>
+      <button class="tab" data-view="settings">⚙️ Settings</button>
     </nav>
 
     <!-- ===== Calculator view ===== -->
@@ -372,6 +434,22 @@
           <button class="key fn" data-gaction="clear">C</button>
           <button class="key eq gcheck span3" data-gaction="check">Check ✓</button>
         </div>
+      </div>
+    </section>
+
+    <!-- ===== Settings view ===== -->
+    <section id="settingsView" class="view">
+      <h2 class="menu-title">Settings ⚙️</h2>
+      <div class="settings-card">
+        <div class="settings-label">Game Difficulty Level</div>
+        <div class="level-stepper">
+          <button class="step-btn" id="levelDown">−</button>
+          <div class="level-value" id="levelValue">2</div>
+          <button class="step-btn" id="levelUp">+</button>
+        </div>
+        <input type="range" id="levelSlider" min="1" max="10" step="1" value="2" aria-label="Difficulty level">
+        <div class="level-hint" id="levelHint">Easy ↔ Hard (1 to 10)</div>
+        <div class="level-range" id="levelRange"></div>
       </div>
     </section>
   </div>
@@ -802,11 +880,55 @@
       document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
       document.getElementById('calcView').classList.toggle('active', view === 'calc');
       document.getElementById('gameView').classList.toggle('active', view === 'game');
+      document.getElementById('settingsView').classList.toggle('active', view === 'settings');
       if (view === 'game') showGameScreen('menu');  // always start at the mode picker
     }
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => { getAudio(); showView(tab.dataset.view); });
     });
+
+    // =====================================================================
+    // SETTINGS — difficulty level (1–10), saved in local storage
+    // =====================================================================
+    const LEVEL_KEY = 'kidsCalc.level';
+    const levelValueEl = document.getElementById('levelValue');
+    const levelSlider = document.getElementById('levelSlider');
+    const levelRangeEl = document.getElementById('levelRange');
+    const levelUpBtn = document.getElementById('levelUp');
+    const levelDownBtn = document.getElementById('levelDown');
+
+    function loadLevel() {
+      let saved = parseInt(localStorage.getItem(LEVEL_KEY), 10);
+      if (!Number.isInteger(saved) || saved < 1 || saved > 10) saved = 2;
+      return saved;
+    }
+
+    function rangeHint(level) {
+      const addMax = addRange(level);
+      const f = factorRange(level);
+      const factorTxt = (f[0] === f[2] && f[1] === f[3])
+        ? ('factors ' + f[0] + '–' + f[1])
+        : (f[0] + '–' + f[1] + ' × ' + f[2] + '–' + f[3]);
+      return '+ and − up to ' + addMax + '  •  × and ÷ ' + factorTxt;
+    }
+
+    function applyLevel(level, save) {
+      level = Math.max(1, Math.min(10, level));
+      gameState.level = level;
+      levelValueEl.textContent = level;
+      levelSlider.value = level;
+      levelRangeEl.textContent = rangeHint(level);
+      levelDownBtn.disabled = (level <= 1);
+      levelUpBtn.disabled = (level >= 10);
+      if (save) localStorage.setItem(LEVEL_KEY, String(level));
+    }
+
+    levelUpBtn.addEventListener('click', () => { playTap('op'); applyLevel(gameState.level + 1, true); });
+    levelDownBtn.addEventListener('click', () => { playTap('op'); applyLevel(gameState.level - 1, true); });
+    levelSlider.addEventListener('input', () => { applyLevel(parseInt(levelSlider.value, 10), true); });
+
+    // Initialise level from storage before anything else uses it.
+    applyLevel(loadLevel(), false);
 
     update();
   </script>
