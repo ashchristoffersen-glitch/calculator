@@ -357,6 +357,119 @@
       font-size: clamp(15px, 2.8vmin, 22px);
       text-align: center;
     }
+
+    /* ===== Game HUD (score + streak) ===== */
+    .hud {
+      display: flex;
+      gap: clamp(6px, 1.5vmin, 12px);
+    }
+    .hud-stat {
+      background: rgba(255,255,255,0.9);
+      border-radius: 999px;
+      padding: 0.3em 0.7em;
+      font-weight: bold;
+      font-size: clamp(14px, 2.8vmin, 24px);
+      color: #5b3aa6;
+      white-space: nowrap;
+    }
+    @keyframes statPop { 0%{transform:scale(1);} 50%{transform:scale(1.3);} 100%{transform:scale(1);} }
+    .hud-stat.bump { animation: statPop 0.35s ease; }
+
+    /* ===== Trophies ===== */
+    #trophiesView { justify-content: flex-start; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .trophy-summary {
+      flex: 0 0 auto;
+      text-align: center;
+      color: #fff;
+      font-weight: bold;
+      font-size: clamp(16px, 3.2vmin, 26px);
+      text-shadow: 0 2px 0 rgba(0,0,0,0.18);
+      margin-bottom: var(--gap);
+    }
+    .trophy-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(clamp(110px, 26vw, 170px), 1fr));
+      gap: var(--gap);
+      align-content: start;
+    }
+    .trophy {
+      background: rgba(255,255,255,0.95);
+      border-radius: var(--radius);
+      padding: clamp(10px, 2.4vmin, 18px);
+      text-align: center;
+      box-shadow: 0 6px 0 rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.3em;
+    }
+    .trophy.locked { background: rgba(255,255,255,0.45); }
+    .trophy .t-icon { font-size: clamp(34px, 8vmin, 60px); line-height: 1; }
+    .trophy.locked .t-icon { filter: grayscale(1); opacity: 0.5; }
+    .trophy .t-name {
+      font-weight: bold;
+      font-size: clamp(13px, 2.4vmin, 18px);
+      color: #5b3aa6;
+    }
+    .trophy.locked .t-name { color: #7a7390; }
+
+    /* ===== Badge award pop-up ===== */
+    .award-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(40,10,60,0.55);
+      padding: 24px;
+    }
+    .award-overlay.show { display: flex; }
+    @keyframes awardIn {
+      0% { transform: scale(0.4) rotate(-12deg); opacity: 0; }
+      70% { transform: scale(1.12) rotate(4deg); opacity: 1; }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    .award-card {
+      background: linear-gradient(160deg, #fff 0%, #fff4cf 100%);
+      border-radius: 28px;
+      padding: clamp(20px, 5vmin, 44px);
+      text-align: center;
+      box-shadow: 0 12px 0 rgba(0,0,0,0.25);
+      max-width: 90vw;
+      animation: awardIn 0.5s ease;
+    }
+    .award-title {
+      font-size: clamp(22px, 5vmin, 38px);
+      font-weight: bold;
+      color: #d6336c;
+    }
+    @keyframes badgeSpin { 0%{transform:rotate(0);} 100%{transform:rotate(360deg);} }
+    .award-icon {
+      font-size: clamp(70px, 18vmin, 150px);
+      line-height: 1.1;
+      animation: badgeSpin 3s linear infinite;
+    }
+    .award-name {
+      font-size: clamp(20px, 4.4vmin, 34px);
+      font-weight: bold;
+      color: #5b3aa6;
+      margin-bottom: 0.5em;
+    }
+    .award-ok {
+      border: none;
+      border-radius: 999px;
+      background: #06d6a0;
+      color: #053a2c;
+      font-family: inherit;
+      font-weight: bold;
+      font-size: clamp(20px, 4vmin, 32px);
+      padding: 0.5em 1.4em;
+      cursor: pointer;
+      box-shadow: 0 6px 0 rgba(0,0,0,0.2);
+      touch-action: manipulation;
+    }
+    .award-ok:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
   </style>
 </head>
 <body>
@@ -364,6 +477,7 @@
     <nav id="topnav">
       <button class="tab active" data-view="calc">🧮 Calculator</button>
       <button class="tab" data-view="game">🎮 Game</button>
+      <button class="tab" data-view="trophies">🏆 Trophies</button>
       <button class="tab" data-view="settings">⚙️ Settings</button>
     </nav>
 
@@ -416,6 +530,10 @@
         <div class="game-bar">
           <button class="small-btn" data-gaction="menu">⬅ Modes</button>
           <div class="game-mode-label" id="modeLabel">Plus ➕</div>
+          <div class="hud">
+            <span class="hud-stat" id="hudScore">⭐ 0</span>
+            <span class="hud-stat" id="hudStreak">🔥 0</span>
+          </div>
         </div>
         <div id="equation" class="equation">– + – = –</div>
         <div id="feedback" class="feedback">&nbsp;</div>
@@ -452,7 +570,25 @@
         <div class="level-range" id="levelRange"></div>
       </div>
     </section>
+
+    <!-- ===== Trophies view ===== -->
+    <section id="trophiesView" class="view">
+      <h2 class="menu-title">My Trophies 🏆</h2>
+      <div class="trophy-summary" id="trophySummary"></div>
+      <div class="trophy-grid" id="trophyGrid"></div>
+    </section>
   </div>
+
+  <!-- Badge award pop-up -->
+  <div id="awardOverlay" class="award-overlay">
+    <div class="award-card">
+      <div class="award-title">New Badge! 🎉</div>
+      <div class="award-icon" id="awardIcon">🏆</div>
+      <div class="award-name" id="awardName"></div>
+      <button class="award-ok" id="awardOk">Yay! 🎈</button>
+    </div>
+  </div>
+
   <canvas id="confetti"></canvas>
 
   <script>
@@ -730,6 +866,17 @@
       mixed:  { label: 'Mixed 🎲' }
     };
 
+    // ----- which mode an operator symbol belongs to (for Mixed) -----
+    const OP_TO_MODE = { '+': 'plus', '−': 'minus', '×': 'times', '÷': 'divide' };
+
+    // Encouraging messages
+    const CHEERS = ['🎉 Great job!', '🌟 Awesome!', '🚀 You got it!', '💎 Brilliant!',
+                    '🦄 Amazing!', '🎯 Spot on!', '👏 Way to go!', '🔥 On fire!'];
+    const STREAK_CHEERS = ['🔥 {n} in a row!', '⚡ {n} streak!', '🌈 {n} in a row, wow!'];
+    const TRY_AGAINS = ['Try again! 💪', 'So close — try again! 🙂', 'Have another go! ✨',
+                        'Not quite — you can do it! 🌟', 'Keep going! 💪'];
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
     function randInt(min, max) {
       return Math.floor(Math.random() * (max - min + 1)) + min;
     }
@@ -832,17 +979,150 @@
     function gBackspace() { gameState.input = gameState.input.slice(0, -1); renderEquation(); }
     function gClearInput() { gameState.input = ''; renderEquation(); }
 
+    // =====================================================================
+    // SCORE, STREAK, BADGES & ACHIEVEMENTS
+    // =====================================================================
+    const STATS_KEY = 'kidsCalc.stats';
+    const hudScoreEl = document.getElementById('hudScore');
+    const hudStreakEl = document.getElementById('hudStreak');
+
+    function blankStats() {
+      return {
+        totalCorrect: 0,
+        bestStreak: 0,
+        modeCorrect: { plus: 0, minus: 0, times: 0, divide: 0 },
+        levelCorrect: {},
+        badges: {}
+      };
+    }
+    function loadStats() {
+      try {
+        const s = JSON.parse(localStorage.getItem(STATS_KEY));
+        if (!s || typeof s !== 'object') return blankStats();
+        const base = blankStats();
+        return {
+          totalCorrect: s.totalCorrect || 0,
+          bestStreak: s.bestStreak || 0,
+          modeCorrect: Object.assign(base.modeCorrect, s.modeCorrect || {}),
+          levelCorrect: s.levelCorrect || {},
+          badges: s.badges || {}
+        };
+      } catch (e) { return blankStats(); }
+    }
+    function saveStats() { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); }
+
+    const stats = loadStats();
+    let streak = 0;  // current run (resets on wrong / mode change)
+
+    const BADGES = [
+      { id: 'total_10',     icon: '🌟', name: '10 Correct',        test: s => s.totalCorrect >= 10 },
+      { id: 'total_50',     icon: '💫', name: '50 Correct',        test: s => s.totalCorrect >= 50 },
+      { id: 'total_100',    icon: '🏆', name: '100 Correct',       test: s => s.totalCorrect >= 100 },
+      { id: 'streak_5',     icon: '🔥', name: '5 in a Row',        test: s => s.bestStreak >= 5 },
+      { id: 'streak_10',    icon: '⚡', name: '10 in a Row',       test: s => s.bestStreak >= 10 },
+      { id: 'plus_master',  icon: '➕', name: 'Addition Master',   test: s => s.modeCorrect.plus  >= 20 },
+      { id: 'minus_star',   icon: '➖', name: 'Subtraction Star',  test: s => s.modeCorrect.minus >= 20 },
+      { id: 'times_champ',  icon: '✖️', name: 'Times Champion',    test: s => s.modeCorrect.times >= 20 },
+      { id: 'divide_hero',  icon: '➗', name: 'Division Hero',      test: s => s.modeCorrect.divide >= 20 },
+      { id: 'level5_champ', icon: '🎖️', name: 'Level 5 Champion',  test: s => (s.levelCorrect[5]  || 0) >= 10 },
+      { id: 'level10_champ',icon: '👑', name: 'Level 10 Champion', test: s => (s.levelCorrect[10] || 0) >= 10 }
+    ];
+
+    function updateHud(bump) {
+      hudScoreEl.textContent = '⭐ ' + stats.totalCorrect;
+      hudStreakEl.textContent = '🔥 ' + streak;
+      if (bump) {
+        [hudScoreEl, hudStreakEl].forEach(el => {
+          el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
+        });
+      }
+    }
+
+    // Award pop-up queue (one badge at a time)
+    const awardOverlay = document.getElementById('awardOverlay');
+    const awardIconEl = document.getElementById('awardIcon');
+    const awardNameEl = document.getElementById('awardName');
+    const awardQueue = [];
+    let awardShowing = false;
+
+    function showNextAward() {
+      if (awardShowing || awardQueue.length === 0) return;
+      const badge = awardQueue.shift();
+      awardShowing = true;
+      awardIconEl.textContent = badge.icon;
+      awardNameEl.textContent = badge.name;
+      awardOverlay.classList.add('show');
+      playHappy();
+      celebrate();
+    }
+    function dismissAward() {
+      awardOverlay.classList.remove('show');
+      awardShowing = false;
+      renderTrophies();
+      setTimeout(showNextAward, 250);
+    }
+    document.getElementById('awardOk').addEventListener('click', () => { playTap('op'); dismissAward(); });
+    awardOverlay.addEventListener('click', (e) => { if (e.target === awardOverlay) dismissAward(); });
+
+    function checkBadges() {
+      let earnedNew = false;
+      BADGES.forEach(b => {
+        if (!stats.badges[b.id] && b.test(stats)) {
+          stats.badges[b.id] = Date.now();
+          awardQueue.push(b);
+          earnedNew = true;
+        }
+      });
+      if (earnedNew) { saveStats(); showNextAward(); }
+    }
+
+    function recordCorrect(q) {
+      stats.totalCorrect++;
+      streak++;
+      if (streak > stats.bestStreak) stats.bestStreak = streak;
+      const mode = OP_TO_MODE[q.op];
+      if (mode) stats.modeCorrect[mode] = (stats.modeCorrect[mode] || 0) + 1;
+      const lvl = gameState.level;
+      stats.levelCorrect[lvl] = (stats.levelCorrect[lvl] || 0) + 1;
+      saveStats();
+      updateHud(true);
+      checkBadges();
+    }
+    function recordWrong() {
+      streak = 0;
+      updateHud(true);
+    }
+
+    // ----- Trophies view -----
+    function renderTrophies() {
+      const earned = Object.keys(stats.badges).length;
+      const summaryEl = document.getElementById('trophySummary');
+      const gridEl = document.getElementById('trophyGrid');
+      summaryEl.textContent = earned > 0
+        ? ('You\'ve earned ' + earned + ' of ' + BADGES.length + ' badges! ⭐ ' + stats.totalCorrect + ' correct')
+        : ('No badges yet — play the game to earn them! ⭐ ' + stats.totalCorrect + ' correct');
+      gridEl.innerHTML = BADGES.map(b => {
+        const has = !!stats.badges[b.id];
+        return '<div class="trophy' + (has ? '' : ' locked') + '">'
+          + '<div class="t-icon">' + (has ? b.icon : '🔒') + '</div>'
+          + '<div class="t-name">' + b.name + '</div></div>';
+      }).join('');
+    }
+
     function gCheck() {
       if (gameState.input === '') { setFeedback('Type a number first! ✏️', 'bad'); return; }
       const answer = parseInt(gameState.input, 10);
       const correct = gameState.q[gameState.q.missing];
       if (answer === correct) {
-        setFeedback('🎉 Great job!', 'good');
+        recordCorrect(gameState.q);
+        const msg = (streak >= 3) ? pick(STREAK_CHEERS).replace('{n}', streak) : pick(CHEERS);
+        setFeedback(msg, 'good');
         playHappy();
         celebrate();
         setTimeout(newQuestion, 1500);
       } else {
-        setFeedback('Try again! 💪', 'bad');
+        recordWrong();
+        setFeedback(pick(TRY_AGAINS), 'bad');
         playTap('back');
         gameState.input = '';
         renderEquation();
@@ -868,6 +1148,8 @@
     function startMode(mode) {
       gameState.mode = mode;
       document.getElementById('modeLabel').textContent = MODE_META[mode].label;
+      streak = 0;
+      updateHud(false);
       showGameScreen('play');
       newQuestion();
     }
@@ -881,7 +1163,9 @@
       document.getElementById('calcView').classList.toggle('active', view === 'calc');
       document.getElementById('gameView').classList.toggle('active', view === 'game');
       document.getElementById('settingsView').classList.toggle('active', view === 'settings');
+      document.getElementById('trophiesView').classList.toggle('active', view === 'trophies');
       if (view === 'game') showGameScreen('menu');  // always start at the mode picker
+      if (view === 'trophies') renderTrophies();
     }
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => { getAudio(); showView(tab.dataset.view); });
