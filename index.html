@@ -2,64 +2,142 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Kids Calculator</title>
   <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      margin: 0;
-      padding: 16px;
+    :root {
+      --gap: clamp(8px, 1.6vmin, 16px);
+      --radius: clamp(16px, 3vmin, 28px);
     }
-    h1 { font-size: 20px; }
-    #display {
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
       width: 100%;
-      min-height: 48px;
-      border: 2px solid #333;
-      padding: 10px;
-      font-size: 28px;
-      margin-bottom: 12px;
-      word-wrap: break-word;
-      overflow-wrap: anywhere;
+      overflow: hidden;
+      -webkit-text-size-adjust: 100%;
+    }
+    body {
+      font-family: "Comic Sans MS", "Chalkboard SE", "Baloo", system-ui, sans-serif;
+      background: linear-gradient(135deg, #ff6ec4 0%, #7873f5 50%, #4ade80 100%);
+      background-attachment: fixed;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      /* iPad touch niceties */
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .app {
+      width: 100%;
+      max-width: 720px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: clamp(8px, 2vmin, 20px);
+      gap: var(--gap);
+    }
+    h1 {
+      margin: 0;
+      text-align: center;
+      color: #fff;
+      font-size: clamp(22px, 4.5vmin, 40px);
+      text-shadow: 0 3px 0 rgba(0,0,0,0.18);
+      letter-spacing: 1px;
+    }
+    #display {
+      flex: 0 0 auto;
+      min-height: clamp(70px, 16vmin, 140px);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      background: #ffffff;
+      border-radius: var(--radius);
+      padding: clamp(10px, 3vmin, 26px);
+      font-size: clamp(28px, 8vmin, 64px);
+      font-weight: bold;
+      color: #3b2f63;
+      box-shadow: 0 8px 0 rgba(0,0,0,0.15), inset 0 0 0 4px #ffe27a;
+      word-break: break-all;
+      overflow: hidden;
+      text-align: right;
     }
     .keys {
+      flex: 1 1 auto;
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-      max-width: 420px;
+      grid-auto-rows: 1fr;
+      gap: var(--gap);
+      min-height: 0;
     }
-    button {
-      font-size: 24px;
-      padding: 18px 0;
+    button.key {
+      border: none;
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: clamp(24px, 6vmin, 48px);
+      font-weight: bold;
+      color: #fff;
       cursor: pointer;
+      box-shadow: 0 7px 0 rgba(0,0,0,0.22);
+      transition: transform 0.05s ease, box-shadow 0.05s ease;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: manipulation;
     }
+    button.key:active {
+      transform: translateY(5px);
+      box-shadow: 0 2px 0 rgba(0,0,0,0.22);
+    }
+    /* Number keys */
+    .num { background: #ffb703; color: #4a2e00; }
+    .num:active { background: #ffc733; }
+    /* Operators */
+    .op { background: #ff5d8f; }
+    .op:active { background: #ff7da6; }
+    /* Clear / backspace */
+    .fn { background: #8338ec; }
+    .fn:active { background: #9a55f5; }
+    /* Equals */
+    .eq { background: #06d6a0; color: #053a2c; }
+    .eq:active { background: #2ee3b6; }
+
+    .span2 { grid-column: span 2; }
+    .rowspan2 { grid-row: span 2; }
   </style>
 </head>
 <body>
-  <h1>Kids Calculator</h1>
-  <div id="display">0</div>
-  <div class="keys">
-    <button class="key" data-action="clear">C</button>
-    <button class="key" data-op="÷">÷</button>
-    <button class="key" data-op="×">×</button>
-    <button class="key" data-action="back">⌫</button>
+  <div class="app">
+    <h1>🌈 My Calculator</h1>
+    <div id="display">0</div>
+    <div class="keys">
+      <button class="key fn" data-action="clear">C</button>
+      <button class="key op" data-op="÷">÷</button>
+      <button class="key op" data-op="×">×</button>
+      <button class="key fn" data-action="back">⌫</button>
 
-    <button class="key" data-num="7">7</button>
-    <button class="key" data-num="8">8</button>
-    <button class="key" data-num="9">9</button>
-    <button class="key" data-op="−">−</button>
+      <button class="key num" data-num="7">7</button>
+      <button class="key num" data-num="8">8</button>
+      <button class="key num" data-num="9">9</button>
+      <button class="key op" data-op="−">−</button>
 
-    <button class="key" data-num="4">4</button>
-    <button class="key" data-num="5">5</button>
-    <button class="key" data-num="6">6</button>
-    <button class="key" data-op="+">+</button>
+      <button class="key num" data-num="4">4</button>
+      <button class="key num" data-num="5">5</button>
+      <button class="key num" data-num="6">6</button>
+      <button class="key op" data-op="+">+</button>
 
-    <button class="key" data-num="1">1</button>
-    <button class="key" data-num="2">2</button>
-    <button class="key" data-num="3">3</button>
-    <button class="key" data-action="equals" style="grid-row: span 2;">=</button>
+      <button class="key num" data-num="1">1</button>
+      <button class="key num" data-num="2">2</button>
+      <button class="key num" data-num="3">3</button>
+      <button class="key eq rowspan2" data-action="equals">=</button>
 
-    <button class="key" data-num="0" style="grid-column: span 3;">0</button>
+      <button class="key num span2" data-num="0">0</button>
+      <button class="key num" data-num="00">00</button>
+    </div>
   </div>
 
   <script>
@@ -88,22 +166,18 @@
 
     function inputNumber(n) {
       if (showingResult) { reset(); }
-      // Avoid leading zeros like "007" -> "7"
-      if (current === '0') current = '';
+      if (current === '0') current = '';      // avoid leading zeros
+      if (current === '' && n === '00') return;
       current += n;
       update();
     }
 
     function inputOperator(op) {
-      if (showingResult) {
-        // Continue calculating from the result.
-        showingResult = false;
-      }
+      if (showingResult) { showingResult = false; }
       if (current === '') {
         if (tokens.length === 0) return;          // can't start with an operator
-        // Replace the last operator if user taps another operator.
         if (isOperator(tokens[tokens.length - 1])) {
-          tokens[tokens.length - 1] = op;
+          tokens[tokens.length - 1] = op;         // replace trailing operator
           update();
           return;
         }
@@ -138,7 +212,6 @@
     }
 
     function compute(values, ops) {
-      // values: array of numbers, ops: array of operators between them.
       // First pass: × and ÷ (left to right).
       let nums = [values[0]];
       let operators = [];
@@ -164,13 +237,11 @@
     }
 
     function equals() {
-      // Build full token list including the number being typed.
       const all = tokens.slice();
       if (current !== '') all.push(current);
-      // Trim a trailing operator (e.g. "12 +" -> "12").
       while (all.length && isOperator(all[all.length - 1])) all.pop();
       if (all.length === 0) return;
-      if (all.length === 1) { // just a single number
+      if (all.length === 1) {
         current = all[0];
         tokens = [];
         update();
@@ -180,7 +251,6 @@
       const ops = [];
       all.forEach((t, i) => { if (i % 2 === 0) values.push(parseFloat(t)); else ops.push(t); });
       let result = compute(values, ops);
-      // Round to avoid floating point noise, keep it whole-ish for kids.
       result = Math.round(result * 1000000) / 1000000;
       const exprStr = all.join(' ');
       display.textContent = exprStr + ' = ' + result;
