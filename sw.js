@@ -53,14 +53,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Other assets (icons, manifest): cache-first, updating the cache in the
-  // background. Always resolve with a valid Response, even offline.
+  // Other assets (icons, manifest): stale-while-revalidate — serve the cached
+  // copy immediately (if any) while refreshing it from the network in the
+  // background; otherwise fetch. Always resolve with a valid Response offline.
   event.respondWith(
     caches.match(req).then((cached) => {
-      if (cached) return cached;
-      return fetch(req)
+      const network = fetch(req)
         .then((res) => cachePut(req, res))
         .catch(() => new Response('', { status: 408, statusText: 'Offline' }));
+      return cached || network;
     })
   );
 });
