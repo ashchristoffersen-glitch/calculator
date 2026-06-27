@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Kids Calculator</title>
+  <style>
+    :root {
+      --gap: clamp(8px, 1.6vmin, 16px);
+      --radius: clamp(16px, 3vmin, 28px);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      -webkit-text-size-adjust: 100%;
+    }
+    body {
+      font-family: "Comic Sans MS", "Chalkboard SE", "Baloo", system-ui, sans-serif;
+      background: linear-gradient(135deg, #ff6ec4 0%, #7873f5 50%, #4ade80 100%);
+      background-attachment: fixed;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      /* iPad touch niceties */
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .app {
+      width: 100%;
+      max-width: 720px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: clamp(8px, 2vmin, 20px);
+      gap: var(--gap);
+    }
+    h1 {
+      margin: 0;
+      text-align: center;
+      color: #fff;
+      font-size: clamp(22px, 4.5vmin, 40px);
+      text-shadow: 0 3px 0 rgba(0,0,0,0.18);
+      letter-spacing: 1px;
+    }
+    #display {
+      flex: 0 0 auto;
+      min-height: clamp(70px, 16vmin, 140px);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      background: #ffffff;
+      border-radius: var(--radius);
+      padding: clamp(10px, 3vmin, 26px);
+      font-size: clamp(28px, 8vmin, 64px);
+      font-weight: bold;
+      color: #3b2f63;
+      box-shadow: 0 8px 0 rgba(0,0,0,0.15), inset 0 0 0 4px #ffe27a;
+      word-break: break-all;
+      overflow: hidden;
+      text-align: right;
+    }
+    .keys {
+      flex: 1 1 auto;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-auto-rows: 1fr;
+      gap: var(--gap);
+      min-height: 0;
+    }
+    button.key {
+      border: none;
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-size: clamp(24px, 6vmin, 48px);
+      font-weight: bold;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 7px 0 rgba(0,0,0,0.22);
+      transition: transform 0.05s ease, box-shadow 0.05s ease;
+      -webkit-user-select: none;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    button.key:active {
+      transform: translateY(5px);
+      box-shadow: 0 2px 0 rgba(0,0,0,0.22);
+    }
+    /* Bounce/wiggle when tapped */
+    @keyframes pop {
+      0%   { transform: scale(1); }
+      30%  { transform: scale(1.18) rotate(-4deg); }
+      60%  { transform: scale(0.94) rotate(3deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+    button.key.pop {
+      animation: pop 0.32s ease;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      button.key.pop { animation: none; }
+    }
+    /* Number keys */
+    .num { background: #ffb703; color: #4a2e00; }
+    .num:active { background: #ffc733; }
+    /* Operators */
+    .op { background: #ff5d8f; }
+    .op:active { background: #ff7da6; }
+    /* Clear / backspace */
+    .fn { background: #8338ec; }
+    .fn:active { background: #9a55f5; }
+    /* Equals */
+    .eq { background: #06d6a0; color: #053a2c; }
+    .eq:active { background: #2ee3b6; }
+
+    .span2 { grid-column: span 2; }
+    .rowspan2 { grid-row: span 2; }
+
+    /* Confetti overlay sits above everything but ignores taps */
+    #confetti {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    /* A little celebratory wiggle for the display on = */
+    @keyframes displayCheer {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.06); }
+      100% { transform: scale(1); }
+    }
+    #display.cheer { animation: displayCheer 0.5s ease; }
+
+    /* ===== Navigation tabs ===== */
+    #topnav {
+      flex: 0 0 auto;
+      display: flex;
+      gap: var(--gap);
+      justify-content: center;
+    }
+    .tab {
+      flex: 1 1 0;
+      max-width: 240px;
+      border: none;
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-weight: bold;
+      font-size: clamp(16px, 3vmin, 26px);
+      padding: clamp(8px, 1.6vmin, 16px);
+      color: #5b3aa6;
+      background: rgba(255,255,255,0.65);
+      cursor: pointer;
+      box-shadow: 0 5px 0 rgba(0,0,0,0.18);
+      touch-action: manipulation;
+    }
+    .tab.active {
+      background: #fff;
+      color: #d6336c;
+    }
+
+    /* ===== Views ===== */
+    .view {
+      display: none;
+      flex: 1 1 auto;
+      flex-direction: column;
+      gap: var(--gap);
+      min-height: 0;
+    }
+    .view.active { display: flex; }
+
+    /* ===== Game ===== */
+    .game-screen {
+      display: none;
+      flex: 1 1 auto;
+      flex-direction: column;
+      gap: var(--gap);
+      min-height: 0;
+    }
+    .game-screen.active { display: flex; }
+
+    .menu-title {
+      flex: 0 0 auto;
+      margin: 0;
+      text-align: center;
+      color: #fff;
+      font-size: clamp(22px, 5vmin, 40px);
+      text-shadow: 0 3px 0 rgba(0,0,0,0.18);
+    }
+    .mode-grid {
+      flex: 1 1 auto;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      grid-auto-rows: 1fr;
+      gap: var(--gap);
+      min-height: 0;
+    }
+    .mode-btn {
+      border: none;
+      border-radius: var(--radius);
+      font-family: inherit;
+      font-weight: bold;
+      font-size: clamp(20px, 4.5vmin, 36px);
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 7px 0 rgba(0,0,0,0.22);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.2em;
+      transition: transform 0.05s ease, box-shadow 0.05s ease;
+      touch-action: manipulation;
+    }
+    .mode-btn:active { transform: translateY(5px); box-shadow: 0 2px 0 rgba(0,0,0,0.22); }
+    .mode-btn .mico { font-size: 1.6em; line-height: 1; }
+    .mode-plus   { background: #ff5d8f; }
+    .mode-minus  { background: #3a86ff; }
+    .mode-times  { background: #8338ec; }
+    .mode-divide { background: #06d6a0; color: #053a2c; }
+    .mode-mixed  { background: #fb8500; grid-column: span 2; }
+
+    .small-btn {
+      border: none;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.8);
+      color: #5b3aa6;
+      font-family: inherit;
+      font-weight: bold;
+      font-size: clamp(13px, 2.4vmin, 20px);
+      padding: 0.4em 0.9em;
+      cursor: pointer;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.18);
+      touch-action: manipulation;
+    }
+
+    .game-bar {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--gap);
+    }
+    .game-mode-label {
+      color: #fff;
+      font-size: clamp(18px, 3.6vmin, 30px);
+      font-weight: bold;
+      text-shadow: 0 2px 0 rgba(0,0,0,0.18);
+    }
+    .equation {
+      flex: 0 0 auto;
+      background: #fff;
+      border-radius: var(--radius);
+      padding: clamp(12px, 4vmin, 32px);
+      text-align: center;
+      font-size: clamp(30px, 8vmin, 70px);
+      font-weight: bold;
+      color: #3b2f63;
+      box-shadow: 0 8px 0 rgba(0,0,0,0.15), inset 0 0 0 4px #ffe27a;
+      word-break: break-word;
+    }
+    .equation .blank {
+      display: inline-block;
+      min-width: 1.4em;
+      padding: 0 0.15em;
+      border-bottom: 6px solid #ff5d8f;
+      color: #d6336c;
+    }
+    .equation .blank.filled { border-bottom-color: #06d6a0; }
+    .feedback {
+      flex: 0 0 auto;
+      text-align: center;
+      min-height: 1.4em;
+      font-size: clamp(18px, 4vmin, 32px);
+      font-weight: bold;
+      color: #fff;
+      text-shadow: 0 2px 0 rgba(0,0,0,0.18);
+    }
+    .feedback.good { color: #073b1e; text-shadow: none; }
+    .feedback.bad  { color: #5a2a00; text-shadow: none; }
+    .gkeys {
+      flex: 1 1 auto;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-auto-rows: 1fr;
+      gap: var(--gap);
+      min-height: 0;
+    }
+    .gcheck { background: #06d6a0; color: #053a2c; }
+    .gcheck:active { background: #2ee3b6; }
+    .span3 { grid-column: span 3; }
+
+    /* ===== Settings ===== */
+    #settingsView { justify-content: flex-start; }
+    .settings-card {
+      background: rgba(255,255,255,0.95);
+      border-radius: var(--radius);
+      padding: clamp(16px, 4vmin, 36px);
+      box-shadow: 0 8px 0 rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: clamp(12px, 3vmin, 26px);
+    }
+    .settings-label {
+      font-size: clamp(20px, 4vmin, 32px);
+      font-weight: bold;
+      color: #5b3aa6;
+      text-align: center;
+    }
+    .level-stepper {
+      display: flex;
+      align-items: center;
+      gap: clamp(16px, 4vmin, 40px);
+    }
+    .step-btn {
+      border: none;
+      border-radius: 50%;
+      width: clamp(64px, 14vmin, 110px);
+      height: clamp(64px, 14vmin, 110px);
+      font-size: clamp(36px, 8vmin, 64px);
+      font-weight: bold;
+      color: #fff;
+      background: #ff5d8f;
+      cursor: pointer;
+      box-shadow: 0 6px 0 rgba(0,0,0,0.2);
+      touch-action: manipulation;
+    }
+    .step-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+    .step-btn:disabled { background: #c9c1d6; box-shadow: 0 6px 0 rgba(0,0,0,0.12); cursor: default; }
+    .level-value {
+      font-size: clamp(60px, 16vmin, 130px);
+      font-weight: bold;
+      color: #06d6a0;
+      min-width: 1.6em;
+      text-align: center;
+      line-height: 1;
+    }
+    #levelSlider {
+      width: 100%;
+      max-width: 460px;
+      height: clamp(18px, 4vmin, 30px);
+      accent-color: #8338ec;
+      cursor: pointer;
+    }
+    .level-hint { color: #8a7fa6; font-size: clamp(14px, 2.6vmin, 20px); }
+    .level-range {
+      color: #d6336c;
+      font-weight: bold;
+      font-size: clamp(15px, 2.8vmin, 22px);
+      text-align: center;
+    }
+
+    /* ===== Game HUD (score + streak) ===== */
+    .hud {
+      display: flex;
+      gap: clamp(6px, 1.5vmin, 12px);
+    }
+    .hud-stat {
+      background: rgba(255,255,255,0.9);
+      border-radius: 999px;
+      padding: 0.3em 0.7em;
+      font-weight: bold;
+      font-size: clamp(14px, 2.8vmin, 24px);
+      color: #5b3aa6;
+      white-space: nowrap;
+    }
+    @keyframes statPop { 0%{transform:scale(1);} 50%{transform:scale(1.3);} 100%{transform:scale(1);} }
+    .hud-stat.bump { animation: statPop 0.35s ease; }
+
+    /* ===== Trophies ===== */
+    #trophiesView { justify-content: flex-start; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .trophy-summary {
+      flex: 0 0 auto;
+      text-align: center;
+      color: #fff;
+      font-weight: bold;
+      font-size: clamp(16px, 3.2vmin, 26px);
+      text-shadow: 0 2px 0 rgba(0,0,0,0.18);
+      margin-bottom: var(--gap);
+    }
+    .trophy-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(clamp(110px, 26vw, 170px), 1fr));
+      gap: var(--gap);
+      align-content: start;
+    }
+    .trophy {
+      background: rgba(255,255,255,0.95);
+      border-radius: var(--radius);
+      padding: clamp(10px, 2.4vmin, 18px);
+      text-align: center;
+      box-shadow: 0 6px 0 rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.3em;
+    }
+    .trophy.locked { background: rgba(255,255,255,0.45); }
+    .trophy .t-icon { font-size: clamp(34px, 8vmin, 60px); line-height: 1; }
+    .trophy.locked .t-icon { filter: grayscale(1); opacity: 0.5; }
+    .trophy .t-name {
+      font-weight: bold;
+      font-size: clamp(13px, 2.4vmin, 18px);
+      color: #5b3aa6;
+    }
+    .trophy.locked .t-name { color: #7a7390; }
+
+    /* ===== Badge award pop-up ===== */
+    .award-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(40,10,60,0.55);
+      padding: 24px;
+    }
+    .award-overlay.show { display: flex; }
+    @keyframes awardIn {
+      0% { transform: scale(0.4) rotate(-12deg); opacity: 0; }
+      70% { transform: scale(1.12) rotate(4deg); opacity: 1; }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    .award-card {
+      background: linear-gradient(160deg, #fff 0%, #fff4cf 100%);
+      border-radius: 28px;
+      padding: clamp(20px, 5vmin, 44px);
+      text-align: center;
+      box-shadow: 0 12px 0 rgba(0,0,0,0.25);
+      max-width: 90vw;
+      animation: awardIn 0.5s ease;
+    }
+    .award-title {
+      font-size: clamp(22px, 5vmin, 38px);
+      font-weight: bold;
+      color: #d6336c;
+    }
+    @keyframes badgeSpin { 0%{transform:rotate(0);} 100%{transform:rotate(360deg);} }
+    .award-icon {
+      font-size: clamp(70px, 18vmin, 150px);
+      line-height: 1.1;
+      animation: badgeSpin 3s linear infinite;
+    }
+    .award-name {
+      font-size: clamp(20px, 4.4vmin, 34px);
+      font-weight: bold;
+      color: #5b3aa6;
+      margin-bottom: 0.5em;
+    }
+    .award-ok {
+      border: none;
+      border-radius: 999px;
+      background: #06d6a0;
+      color: #053a2c;
+      font-family: inherit;
+      font-weight: bold;
+      font-size: clamp(20px, 4vmin, 32px);
+      padding: 0.5em 1.4em;
+      cursor: pointer;
+      box-shadow: 0 6px 0 rgba(0,0,0,0.2);
+      touch-action: manipulation;
+    }
+    .award-ok:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <nav id="topnav">
+      <button class="tab active" data-view="calc">🧮 Calculator</button>
+      <button class="tab" data-view="game">🎮 Game</button>
+      <button class="tab" data-view="trophies">🏆 Trophies</button>
+      <button class="tab" data-view="settings">⚙️ Settings</button>
+    </nav>
+
+    <!-- ===== Calculator view ===== -->
+    <section id="calcView" class="view active">
+      <div id="display">0</div>
+      <div class="keys">
+        <button class="key fn" data-action="clear">C</button>
+        <button class="key op" data-op="÷">÷</button>
+        <button class="key op" data-op="×">×</button>
+        <button class="key fn" data-action="back">⌫</button>
+
+        <button class="key num" data-num="7">7</button>
+        <button class="key num" data-num="8">8</button>
+        <button class="key num" data-num="9">9</button>
+        <button class="key op" data-op="−">−</button>
+
+        <button class="key num" data-num="4">4</button>
+        <button class="key num" data-num="5">5</button>
+        <button class="key num" data-num="6">6</button>
+        <button class="key op" data-op="+">+</button>
+
+        <button class="key num" data-num="1">1</button>
+        <button class="key num" data-num="2">2</button>
+        <button class="key num" data-num="3">3</button>
+        <button class="key eq rowspan2" data-action="equals">=</button>
+
+        <button class="key num span2" data-num="0">0</button>
+        <button class="key num" data-num="00">00</button>
+      </div>
+    </section>
+
+    <!-- ===== Game view ===== -->
+    <section id="gameView" class="view">
+
+      <!-- Mode select -->
+      <div id="gameMenu" class="game-screen active">
+        <h2 class="menu-title">Pick a game! 🎲</h2>
+        <div class="mode-grid">
+          <button class="mode-btn mode-plus" data-mode="plus"><span class="mico">➕</span><span>Plus</span></button>
+          <button class="mode-btn mode-minus" data-mode="minus"><span class="mico">➖</span><span>Minus</span></button>
+          <button class="mode-btn mode-times" data-mode="times"><span class="mico">✖️</span><span>Times</span></button>
+          <button class="mode-btn mode-divide" data-mode="divide"><span class="mico">➗</span><span>Divide</span></button>
+          <button class="mode-btn mode-mixed" data-mode="mixed"><span class="mico">🎲</span><span>Mixed</span></button>
+        </div>
+      </div>
+
+      <!-- Play -->
+      <div id="gamePlay" class="game-screen">
+        <div class="game-bar">
+          <button class="small-btn" data-gaction="menu">⬅ Modes</button>
+          <div class="game-mode-label" id="modeLabel">Plus ➕</div>
+          <div class="hud">
+            <span class="hud-stat" id="hudScore">⭐ 0</span>
+            <span class="hud-stat" id="hudStreak">🔥 0</span>
+          </div>
+        </div>
+        <div id="equation" class="equation">– + – = –</div>
+        <div id="feedback" class="feedback">&nbsp;</div>
+        <div class="gkeys">
+          <button class="key num gnum" data-gnum="7">7</button>
+          <button class="key num gnum" data-gnum="8">8</button>
+          <button class="key num gnum" data-gnum="9">9</button>
+          <button class="key num gnum" data-gnum="4">4</button>
+          <button class="key num gnum" data-gnum="5">5</button>
+          <button class="key num gnum" data-gnum="6">6</button>
+          <button class="key num gnum" data-gnum="1">1</button>
+          <button class="key num gnum" data-gnum="2">2</button>
+          <button class="key num gnum" data-gnum="3">3</button>
+          <button class="key fn" data-gaction="back">⌫</button>
+          <button class="key num gnum" data-gnum="0">0</button>
+          <button class="key fn" data-gaction="clear">C</button>
+          <button class="key eq gcheck span3" data-gaction="check">Check ✓</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Settings view ===== -->
+    <section id="settingsView" class="view">
+      <h2 class="menu-title">Settings ⚙️</h2>
+      <div class="settings-card">
+        <div class="settings-label">Game Difficulty Level</div>
+        <div class="level-stepper">
+          <button class="step-btn" id="levelDown">−</button>
+          <div class="level-value" id="levelValue">2</div>
+          <button class="step-btn" id="levelUp">+</button>
+        </div>
+        <input type="range" id="levelSlider" min="1" max="10" step="1" value="2" aria-label="Difficulty level">
+        <div class="level-hint" id="levelHint">Easy ↔ Hard (1 to 10)</div>
+        <div class="level-range" id="levelRange"></div>
+      </div>
+    </section>
+
+    <!-- ===== Trophies view ===== -->
+    <section id="trophiesView" class="view">
+      <h2 class="menu-title">My Trophies 🏆</h2>
+      <div class="trophy-summary" id="trophySummary"></div>
+      <div class="trophy-grid" id="trophyGrid"></div>
+    </section>
+  </div>
+
+  <!-- Badge award pop-up -->
+  <div id="awardOverlay" class="award-overlay">
+    <div class="award-card">
+      <div class="award-title">New Badge! 🎉</div>
+      <div class="award-icon" id="awardIcon">🏆</div>
+      <div class="award-name" id="awardName"></div>
+      <button class="award-ok" id="awardOk">Yay! 🎈</button>
+    </div>
+  </div>
+
+  <canvas id="confetti"></canvas>
+
+  <script>
+    // ----- Calculator state -----
+    // We keep the expression as a list of tokens, e.g. ["12", "+", "7"].
+    // The whole expression stays visible until "=" is pressed (requirement #3).
+    const display = document.getElementById('display');
+
+    let tokens = [];      // e.g. ["12", "+", "7"]
+    let current = '';     // the number currently being typed
+    let showingResult = false;
+
+    function expressionText() {
+      const parts = tokens.slice();
+      if (current !== '') parts.push(current);
+      return parts.join(' ');
+    }
+
+    function render(text) {
+      display.textContent = (text === undefined || text === '') ? '0' : text;
+    }
+
+    function update() {
+      render(expressionText());
+    }
+
+    function inputNumber(n) {
+      if (showingResult) { reset(); }
+      if (current === '0') current = '';      // avoid leading zeros
+      if (current === '' && n === '00') return;
+      current += n;
+      update();
+    }
+
+    function inputOperator(op) {
+      if (showingResult) { showingResult = false; }
+      if (current === '') {
+        if (tokens.length === 0) return;          // can't start with an operator
+        if (isOperator(tokens[tokens.length - 1])) {
+          tokens[tokens.length - 1] = op;         // replace trailing operator
+          update();
+          return;
+        }
+      } else {
+        tokens.push(current);
+        current = '';
+      }
+      tokens.push(op);
+      update();
+    }
+
+    function isOperator(t) {
+      return t === '+' || t === '−' || t === '×' || t === '÷';
+    }
+
+    function backspace() {
+      if (showingResult) { reset(); return; }
+      if (current !== '') {
+        current = current.slice(0, -1);
+      } else if (tokens.length > 0) {
+        const last = tokens.pop();
+        if (!isOperator(last)) current = last.slice(0, -1);
+      }
+      update();
+    }
+
+    function reset() {
+      tokens = [];
+      current = '';
+      showingResult = false;
+      update();
+    }
+
+    function compute(values, ops) {
+      // First pass: × and ÷ (left to right).
+      let nums = [values[0]];
+      let operators = [];
+      for (let i = 0; i < ops.length; i++) {
+        const op = ops[i];
+        const val = values[i + 1];
+        if (op === '×') {
+          nums[nums.length - 1] = nums[nums.length - 1] * val;
+        } else if (op === '÷') {
+          nums[nums.length - 1] = nums[nums.length - 1] / val;
+        } else {
+          operators.push(op);
+          nums.push(val);
+        }
+      }
+      // Second pass: + and − (left to right).
+      let result = nums[0];
+      for (let i = 0; i < operators.length; i++) {
+        if (operators[i] === '+') result += nums[i + 1];
+        else result -= nums[i + 1];
+      }
+      return result;
+    }
+
+    function equals() {
+      const all = tokens.slice();
+      if (current !== '') all.push(current);
+      while (all.length && isOperator(all[all.length - 1])) all.pop();
+      if (all.length === 0) return false;
+      if (all.length === 1) {
+        current = all[0];
+        tokens = [];
+        update();
+        return false;
+      }
+      const values = [];
+      const ops = [];
+      all.forEach((t, i) => { if (i % 2 === 0) values.push(parseFloat(t)); else ops.push(t); });
+      let result = compute(values, ops);
+      result = Math.round(result * 1000000) / 1000000;
+      const exprStr = all.join(' ');
+      display.textContent = exprStr + ' = ' + result;
+      tokens = [];
+      current = String(result);
+      showingResult = true;
+      return true;
+    }
+
+    // ----- Sounds (Web Audio API, generated in-browser, lightweight) -----
+    let audioCtx = null;
+    function getAudio() {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) audioCtx = new AC();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+    // A single short, soft note.
+    function playNote(freq, startOffset, duration, type, peak) {
+      const ctx = getAudio();
+      if (!ctx) return;
+      const t0 = ctx.currentTime + (startOffset || 0);
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      const vol = (peak === undefined ? 0.18 : peak);
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t0);
+      osc.stop(t0 + duration + 0.02);
+    }
+    // Cheerful "boop" for taps; pitch varies a little by key type.
+    function playTap(kind) {
+      const freqs = { num: 660, op: 540, fn: 420, back: 360 };
+      playNote(freqs[kind] || 600, 0, 0.12, 'triangle', 0.16);
+    }
+    // Happy ascending arpeggio for "=".
+    function playHappy() {
+      const notes = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6
+      notes.forEach((f, i) => playNote(f, i * 0.09, 0.22, 'triangle', 0.2));
+    }
+
+    function bounce(btn) {
+      btn.classList.remove('pop');
+      // Force reflow so the animation can restart on rapid taps.
+      void btn.offsetWidth;
+      btn.classList.add('pop');
+    }
+
+    // ----- Confetti / sparkles (lightweight canvas, no libraries) -----
+    const confettiCanvas = document.getElementById('confetti');
+    const cctx = confettiCanvas.getContext('2d');
+    let confettiPieces = [];
+    let confettiRAF = null;
+
+    function sizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      confettiCanvas.width = Math.floor(window.innerWidth * dpr);
+      confettiCanvas.height = Math.floor(window.innerHeight * dpr);
+      cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener('resize', sizeCanvas);
+    sizeCanvas();
+
+    const CONFETTI_COLORS = ['#ff5d8f', '#ffb703', '#06d6a0', '#8338ec', '#3a86ff', '#ff006e', '#fb5607'];
+
+    function launchConfetti() {
+      const W = window.innerWidth;
+      const n = 90;
+      for (let i = 0; i < n; i++) {
+        confettiPieces.push({
+          x: W / 2 + (Math.random() - 0.5) * W * 0.5,
+          y: window.innerHeight * 0.32,
+          vx: (Math.random() - 0.5) * 9,
+          vy: -7 - Math.random() * 9,
+          size: 6 + Math.random() * 8,
+          color: CONFETTI_COLORS[(Math.random() * CONFETTI_COLORS.length) | 0],
+          rot: Math.random() * Math.PI,
+          vrot: (Math.random() - 0.5) * 0.4,
+          shape: Math.random() < 0.5 ? 'rect' : 'circle',
+          life: 0
+        });
+      }
+      if (!confettiRAF) confettiRAF = requestAnimationFrame(stepConfetti);
+    }
+
+    function stepConfetti() {
+      cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+      const gravity = 0.32;
+      confettiPieces.forEach(p => {
+        p.vy += gravity;
+        p.vx *= 0.99;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rot += p.vrot;
+        p.life++;
+        cctx.save();
+        cctx.translate(p.x, p.y);
+        cctx.rotate(p.rot);
+        cctx.fillStyle = p.color;
+        cctx.globalAlpha = Math.max(0, 1 - p.life / 130);
+        if (p.shape === 'rect') {
+          cctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+        } else {
+          cctx.beginPath();
+          cctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+          cctx.fill();
+        }
+        cctx.restore();
+      });
+      confettiPieces = confettiPieces.filter(p => p.life < 130 && p.y < window.innerHeight + 40);
+      if (confettiPieces.length > 0) {
+        confettiRAF = requestAnimationFrame(stepConfetti);
+      } else {
+        cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+        confettiRAF = null;
+      }
+    }
+
+    function celebrate() {
+      launchConfetti();
+      display.classList.remove('cheer');
+      void display.offsetWidth;
+      display.classList.add('cheer');
+    }
+
+    document.querySelectorAll('.key').forEach(btn => {
+      btn.addEventListener('animationend', () => btn.classList.remove('pop'));
+      btn.addEventListener('click', () => {
+        bounce(btn);
+        if (btn.dataset.num !== undefined) { playTap('num'); inputNumber(btn.dataset.num); }
+        else if (btn.dataset.op !== undefined) { playTap('op'); inputOperator(btn.dataset.op); }
+        else if (btn.dataset.action === 'clear') { playTap('fn'); reset(); }
+        else if (btn.dataset.action === 'back') { playTap('back'); backspace(); }
+        else if (btn.dataset.action === 'equals') { if (equals()) { playHappy(); celebrate(); } }
+      });
+    });
+
+    // =====================================================================
+    // GAME MODE
+    // =====================================================================
+    const equationEl = document.getElementById('equation');
+    const feedbackEl = document.getElementById('feedback');
+
+    const gameState = {
+      mode: 'plus',     // plus | minus | times | divide | mixed
+      level: 2,         // default level for now (Settings comes in CP7)
+      q: null,          // current question
+      input: ''         // the digits the child has typed
+    };
+
+    const MODE_META = {
+      plus:   { label: 'Plus ➕' },
+      minus:  { label: 'Minus ➖' },
+      times:  { label: 'Times ✖️' },
+      divide: { label: 'Divide ➗' },
+      mixed:  { label: 'Mixed 🎲' }
+    };
+
+    // ----- which mode an operator symbol belongs to (for Mixed) -----
+    const OP_TO_MODE = { '+': 'plus', '−': 'minus', '×': 'times', '÷': 'divide' };
+
+    // Encouraging messages
+    const CHEERS = ['🎉 Great job!', '🌟 Awesome!', '🚀 You got it!', '💎 Brilliant!',
+                    '🦄 Amazing!', '🎯 Spot on!', '👏 Way to go!', '🔥 On fire!'];
+    const STREAK_CHEERS = ['🔥 {n} in a row!', '⚡ {n} streak!', '🌈 {n} in a row, wow!'];
+    const TRY_AGAINS = ['Try again! 💪', 'So close — try again! 🙂', 'Have another go! ✨',
+                        'Not quite — you can do it! 🌟', 'Keep going! 💪'];
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function randInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    // + and − number range per level (table from PLAN.md).
+    const ADD_RANGE = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000];
+    function addRange(level) { return ADD_RANGE[level - 1] || 20; }
+
+    // × and ÷ factor ranges per level: [aMin, aMax, bMin, bMax].
+    const FACTOR_RANGE = [
+      [1, 5, 1, 5],        // L1: factors 1–5
+      [1, 10, 1, 10],      // L2: factors 1–10
+      [1, 12, 1, 12],      // L3: factors 1–12
+      [10, 99, 1, 9],      // L4: 2-digit × 1-digit
+      [10, 99, 1, 9],      // L5: 2-digit × 1-digit
+      [10, 99, 10, 99],    // L6: 2-digit × 2-digit
+      [10, 99, 10, 99],    // L7: 2-digit × 2-digit
+      [100, 999, 1, 9],    // L8: 3-digit × 1-digit
+      [100, 999, 10, 99],  // L9: 3-digit × 2-digit
+      [100, 999, 10, 99]   // L10: 3-digit × 2-digit
+    ];
+    function factorRange(level) { return FACTOR_RANGE[level - 1] || FACTOR_RANGE[1]; }
+
+    // Each generator returns { op, a, b, result } where a op b = result always holds.
+    function generatePlus(level) {
+      const max = addRange(level);
+      const a = randInt(1, max);
+      const b = randInt(1, max);
+      return { op: '+', a: a, b: b, result: a + b };
+    }
+    // Subtraction never goes negative: big − small = result (≥ 0).
+    function generateMinus(level) {
+      const max = addRange(level);
+      let a = randInt(1, max);
+      let b = randInt(1, max);
+      if (b > a) { const t = a; a = b; b = t; }
+      return { op: '−', a: a, b: b, result: a - b };
+    }
+    function generateTimes(level) {
+      const r = factorRange(level);
+      const a = randInt(r[0], r[1]);
+      const b = randInt(r[2], r[3]);
+      return { op: '×', a: a, b: b, result: a * b };
+    }
+    // Division is the reverse of a multiplication, so it's always even.
+    function generateDivide(level) {
+      const r = factorRange(level);
+      const quotient = randInt(r[0], r[1]);
+      const divisor = randInt(Math.max(1, r[2]), r[3]);  // never divide by zero
+      const dividend = quotient * divisor;
+      return { op: '÷', a: dividend, b: divisor, result: quotient };
+    }
+
+    const GENERATORS = {
+      plus: generatePlus, minus: generateMinus, times: generateTimes, divide: generateDivide
+    };
+
+    function generateFor(mode, level) {
+      if (mode === 'mixed') {
+        const pick = ['plus', 'minus', 'times', 'divide'][randInt(0, 3)];
+        return GENERATORS[pick](level);
+      }
+      return GENERATORS[mode](level);
+    }
+
+    function newQuestion() {
+      const q = generateFor(gameState.mode, gameState.level);
+      q.missing = ['a', 'b', 'result'][randInt(0, 2)];  // first / middle / result
+      gameState.q = q;
+      gameState.input = '';
+      setFeedback('', '');
+      renderEquation();
+    }
+
+    function cellHtml(key) {
+      const q = gameState.q;
+      if (q.missing === key) {
+        const val = gameState.input;
+        return '<span class="blank ' + (val ? 'filled' : '') + '">' + (val || '?') + '</span>';
+      }
+      return q[key];
+    }
+
+    function renderEquation() {
+      const q = gameState.q;
+      equationEl.innerHTML = cellHtml('a') + ' ' + q.op + ' ' + cellHtml('b') + ' = ' + cellHtml('result');
+    }
+
+    function setFeedback(text, cls) {
+      feedbackEl.textContent = text || '\u00A0';
+      feedbackEl.className = 'feedback' + (cls ? ' ' + cls : '');
+    }
+
+    function gInputNum(n) {
+      if (gameState.input.length >= 6) return;
+      if (gameState.input === '0') gameState.input = '';
+      gameState.input += n;
+      renderEquation();
+    }
+    function gBackspace() { gameState.input = gameState.input.slice(0, -1); renderEquation(); }
+    function gClearInput() { gameState.input = ''; renderEquation(); }
+
+    // =====================================================================
+    // SCORE, STREAK, BADGES & ACHIEVEMENTS
+    // =====================================================================
+    const STATS_KEY = 'kidsCalc.stats';
+    const hudScoreEl = document.getElementById('hudScore');
+    const hudStreakEl = document.getElementById('hudStreak');
+
+    function blankStats() {
+      return {
+        totalCorrect: 0,
+        bestStreak: 0,
+        modeCorrect: { plus: 0, minus: 0, times: 0, divide: 0 },
+        levelCorrect: {},
+        badges: {}
+      };
+    }
+    function loadStats() {
+      try {
+        const s = JSON.parse(localStorage.getItem(STATS_KEY));
+        if (!s || typeof s !== 'object') return blankStats();
+        const base = blankStats();
+        return {
+          totalCorrect: s.totalCorrect || 0,
+          bestStreak: s.bestStreak || 0,
+          modeCorrect: Object.assign(base.modeCorrect, s.modeCorrect || {}),
+          levelCorrect: s.levelCorrect || {},
+          badges: s.badges || {}
+        };
+      } catch (e) { return blankStats(); }
+    }
+    function saveStats() { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); }
+
+    const stats = loadStats();
+    let streak = 0;  // current run (resets on wrong / mode change)
+
+    const BADGES = [
+      { id: 'total_10',     icon: '🌟', name: '10 Correct',        test: s => s.totalCorrect >= 10 },
+      { id: 'total_50',     icon: '💫', name: '50 Correct',        test: s => s.totalCorrect >= 50 },
+      { id: 'total_100',    icon: '🏆', name: '100 Correct',       test: s => s.totalCorrect >= 100 },
+      { id: 'streak_5',     icon: '🔥', name: '5 in a Row',        test: s => s.bestStreak >= 5 },
+      { id: 'streak_10',    icon: '⚡', name: '10 in a Row',       test: s => s.bestStreak >= 10 },
+      { id: 'plus_master',  icon: '➕', name: 'Addition Master',   test: s => s.modeCorrect.plus  >= 20 },
+      { id: 'minus_star',   icon: '➖', name: 'Subtraction Star',  test: s => s.modeCorrect.minus >= 20 },
+      { id: 'times_champ',  icon: '✖️', name: 'Times Champion',    test: s => s.modeCorrect.times >= 20 },
+      { id: 'divide_hero',  icon: '➗', name: 'Division Hero',      test: s => s.modeCorrect.divide >= 20 },
+      { id: 'level5_champ', icon: '🎖️', name: 'Level 5 Champion',  test: s => (s.levelCorrect[5]  || 0) >= 10 },
+      { id: 'level10_champ',icon: '👑', name: 'Level 10 Champion', test: s => (s.levelCorrect[10] || 0) >= 10 }
+    ];
+
+    function updateHud(bump) {
+      hudScoreEl.textContent = '⭐ ' + stats.totalCorrect;
+      hudStreakEl.textContent = '🔥 ' + streak;
+      if (bump) {
+        [hudScoreEl, hudStreakEl].forEach(el => {
+          el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
+        });
+      }
+    }
+
+    // Award pop-up queue (one badge at a time)
+    const awardOverlay = document.getElementById('awardOverlay');
+    const awardIconEl = document.getElementById('awardIcon');
+    const awardNameEl = document.getElementById('awardName');
+    const awardQueue = [];
+    let awardShowing = false;
+
+    function showNextAward() {
+      if (awardShowing || awardQueue.length === 0) return;
+      const badge = awardQueue.shift();
+      awardShowing = true;
+      awardIconEl.textContent = badge.icon;
+      awardNameEl.textContent = badge.name;
+      awardOverlay.classList.add('show');
+      playHappy();
+      celebrate();
+    }
+    function dismissAward() {
+      awardOverlay.classList.remove('show');
+      awardShowing = false;
+      renderTrophies();
+      setTimeout(showNextAward, 250);
+    }
+    document.getElementById('awardOk').addEventListener('click', () => { playTap('op'); dismissAward(); });
+    awardOverlay.addEventListener('click', (e) => { if (e.target === awardOverlay) dismissAward(); });
+
+    function checkBadges() {
+      let earnedNew = false;
+      BADGES.forEach(b => {
+        if (!stats.badges[b.id] && b.test(stats)) {
+          stats.badges[b.id] = Date.now();
+          awardQueue.push(b);
+          earnedNew = true;
+        }
+      });
+      if (earnedNew) { saveStats(); showNextAward(); }
+    }
+
+    function recordCorrect(q) {
+      stats.totalCorrect++;
+      streak++;
+      if (streak > stats.bestStreak) stats.bestStreak = streak;
+      const mode = OP_TO_MODE[q.op];
+      if (mode) stats.modeCorrect[mode] = (stats.modeCorrect[mode] || 0) + 1;
+      const lvl = gameState.level;
+      stats.levelCorrect[lvl] = (stats.levelCorrect[lvl] || 0) + 1;
+      saveStats();
+      updateHud(true);
+      checkBadges();
+    }
+    function recordWrong() {
+      streak = 0;
+      updateHud(true);
+    }
+
+    // ----- Trophies view -----
+    function renderTrophies() {
+      const earned = Object.keys(stats.badges).length;
+      const summaryEl = document.getElementById('trophySummary');
+      const gridEl = document.getElementById('trophyGrid');
+      summaryEl.textContent = earned > 0
+        ? ('You\'ve earned ' + earned + ' of ' + BADGES.length + ' badges! ⭐ ' + stats.totalCorrect + ' correct')
+        : ('No badges yet — play the game to earn them! ⭐ ' + stats.totalCorrect + ' correct');
+      gridEl.innerHTML = BADGES.map(b => {
+        const has = !!stats.badges[b.id];
+        return '<div class="trophy' + (has ? '' : ' locked') + '">'
+          + '<div class="t-icon">' + (has ? b.icon : '🔒') + '</div>'
+          + '<div class="t-name">' + b.name + '</div></div>';
+      }).join('');
+    }
+
+    function gCheck() {
+      if (gameState.input === '') { setFeedback('Type a number first! ✏️', 'bad'); return; }
+      const answer = parseInt(gameState.input, 10);
+      const correct = gameState.q[gameState.q.missing];
+      if (answer === correct) {
+        recordCorrect(gameState.q);
+        const msg = (streak >= 3) ? pick(STREAK_CHEERS).replace('{n}', streak) : pick(CHEERS);
+        setFeedback(msg, 'good');
+        playHappy();
+        celebrate();
+        setTimeout(newQuestion, 1500);
+      } else {
+        recordWrong();
+        setFeedback(pick(TRY_AGAINS), 'bad');
+        playTap('back');
+        gameState.input = '';
+        renderEquation();
+      }
+    }
+
+    // Game keypad
+    document.querySelectorAll('[data-gnum], [data-gaction]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.gnum !== undefined) { playTap('num'); gInputNum(btn.dataset.gnum); }
+        else if (btn.dataset.gaction === 'back') { playTap('back'); gBackspace(); }
+        else if (btn.dataset.gaction === 'clear') { playTap('fn'); gClearInput(); }
+        else if (btn.dataset.gaction === 'check') { gCheck(); }
+        else if (btn.dataset.gaction === 'menu') { playTap('fn'); showGameScreen('menu'); }
+      });
+    });
+
+    // ----- Game screens (mode select <-> play) -----
+    function showGameScreen(name) {
+      document.getElementById('gameMenu').classList.toggle('active', name === 'menu');
+      document.getElementById('gamePlay').classList.toggle('active', name === 'play');
+    }
+    function startMode(mode) {
+      gameState.mode = mode;
+      document.getElementById('modeLabel').textContent = MODE_META[mode].label;
+      streak = 0;
+      updateHud(false);
+      showGameScreen('play');
+      newQuestion();
+    }
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => { getAudio(); playTap('op'); startMode(btn.dataset.mode); });
+    });
+
+    // ----- View navigation (Calculator <-> Game) -----
+    function showView(view) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
+      document.getElementById('calcView').classList.toggle('active', view === 'calc');
+      document.getElementById('gameView').classList.toggle('active', view === 'game');
+      document.getElementById('settingsView').classList.toggle('active', view === 'settings');
+      document.getElementById('trophiesView').classList.toggle('active', view === 'trophies');
+      if (view === 'game') showGameScreen('menu');  // always start at the mode picker
+      if (view === 'trophies') renderTrophies();
+    }
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => { getAudio(); showView(tab.dataset.view); });
+    });
+
+    // =====================================================================
+    // SETTINGS — difficulty level (1–10), saved in local storage
+    // =====================================================================
+    const LEVEL_KEY = 'kidsCalc.level';
+    const levelValueEl = document.getElementById('levelValue');
+    const levelSlider = document.getElementById('levelSlider');
+    const levelRangeEl = document.getElementById('levelRange');
+    const levelUpBtn = document.getElementById('levelUp');
+    const levelDownBtn = document.getElementById('levelDown');
+
+    function loadLevel() {
+      let saved = parseInt(localStorage.getItem(LEVEL_KEY), 10);
+      if (!Number.isInteger(saved) || saved < 1 || saved > 10) saved = 2;
+      return saved;
+    }
+
+    function rangeHint(level) {
+      const addMax = addRange(level);
+      const f = factorRange(level);
+      const factorTxt = (f[0] === f[2] && f[1] === f[3])
+        ? ('factors ' + f[0] + '–' + f[1])
+        : (f[0] + '–' + f[1] + ' × ' + f[2] + '–' + f[3]);
+      return '+ and − up to ' + addMax + '  •  × and ÷ ' + factorTxt;
+    }
+
+    function applyLevel(level, save) {
+      level = Math.max(1, Math.min(10, level));
+      gameState.level = level;
+      levelValueEl.textContent = level;
+      levelSlider.value = level;
+      levelRangeEl.textContent = rangeHint(level);
+      levelDownBtn.disabled = (level <= 1);
+      levelUpBtn.disabled = (level >= 10);
+      if (save) localStorage.setItem(LEVEL_KEY, String(level));
+    }
+
+    levelUpBtn.addEventListener('click', () => { playTap('op'); applyLevel(gameState.level + 1, true); });
+    levelDownBtn.addEventListener('click', () => { playTap('op'); applyLevel(gameState.level - 1, true); });
+    levelSlider.addEventListener('input', () => { applyLevel(parseInt(levelSlider.value, 10), true); });
+
+    // Initialise level from storage before anything else uses it.
+    applyLevel(loadLevel(), false);
+
+    update();
+  </script>
+</body>
+</html>
