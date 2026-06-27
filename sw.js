@@ -61,7 +61,13 @@ self.addEventListener('fetch', (event) => {
       const network = fetch(req)
         .then((res) => cachePut(req, res))
         .catch(() => new Response('', { status: 408, statusText: 'Offline' }));
-      return cached || network;
+      // Keep the SW alive so the background refresh completes after we've
+      // already responded from cache.
+      if (cached) {
+        event.waitUntil(network.catch(() => {}));
+        return cached;
+      }
+      return network;
     })
   );
 });
