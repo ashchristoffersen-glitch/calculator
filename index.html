@@ -121,6 +121,23 @@
 
     .span2 { grid-column: span 2; }
     .rowspan2 { grid-row: span 2; }
+
+    /* Confetti overlay sits above everything but ignores taps */
+    #confetti {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    /* A little celebratory wiggle for the display on = */
+    @keyframes displayCheer {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.06); }
+      100% { transform: scale(1); }
+    }
+    #display.cheer { animation: displayCheer 0.5s ease; }
   </style>
 </head>
 <body>
@@ -152,6 +169,7 @@
       <button class="key num" data-num="00">00</button>
     </div>
   </div>
+  <canvas id="confetti"></canvas>
 
   <script>
     // ----- Calculator state -----
@@ -253,12 +271,12 @@
       const all = tokens.slice();
       if (current !== '') all.push(current);
       while (all.length && isOperator(all[all.length - 1])) all.pop();
-      if (all.length === 0) return;
+      if (all.length === 0) return false;
       if (all.length === 1) {
         current = all[0];
         tokens = [];
         update();
-        return;
+        return false;
       }
       const values = [];
       const ops = [];
@@ -270,6 +288,7 @@
       tokens = [];
       current = String(result);
       showingResult = true;
+      return true;
     }
 
     // ----- Sounds (Web Audio API, generated in-browser, lightweight) -----
@@ -317,6 +336,83 @@
       btn.classList.add('pop');
     }
 
+    // ----- Confetti / sparkles (lightweight canvas, no libraries) -----
+    const confettiCanvas = document.getElementById('confetti');
+    const cctx = confettiCanvas.getContext('2d');
+    let confettiPieces = [];
+    let confettiRAF = null;
+
+    function sizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      confettiCanvas.width = Math.floor(window.innerWidth * dpr);
+      confettiCanvas.height = Math.floor(window.innerHeight * dpr);
+      cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener('resize', sizeCanvas);
+    sizeCanvas();
+
+    const CONFETTI_COLORS = ['#ff5d8f', '#ffb703', '#06d6a0', '#8338ec', '#3a86ff', '#ff006e', '#fb5607'];
+
+    function launchConfetti() {
+      const W = window.innerWidth;
+      const n = 90;
+      for (let i = 0; i < n; i++) {
+        confettiPieces.push({
+          x: W / 2 + (Math.random() - 0.5) * W * 0.5,
+          y: window.innerHeight * 0.32,
+          vx: (Math.random() - 0.5) * 9,
+          vy: -7 - Math.random() * 9,
+          size: 6 + Math.random() * 8,
+          color: CONFETTI_COLORS[(Math.random() * CONFETTI_COLORS.length) | 0],
+          rot: Math.random() * Math.PI,
+          vrot: (Math.random() - 0.5) * 0.4,
+          shape: Math.random() < 0.5 ? 'rect' : 'circle',
+          life: 0
+        });
+      }
+      if (!confettiRAF) confettiRAF = requestAnimationFrame(stepConfetti);
+    }
+
+    function stepConfetti() {
+      cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+      const gravity = 0.32;
+      confettiPieces.forEach(p => {
+        p.vy += gravity;
+        p.vx *= 0.99;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rot += p.vrot;
+        p.life++;
+        cctx.save();
+        cctx.translate(p.x, p.y);
+        cctx.rotate(p.rot);
+        cctx.fillStyle = p.color;
+        cctx.globalAlpha = Math.max(0, 1 - p.life / 130);
+        if (p.shape === 'rect') {
+          cctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+        } else {
+          cctx.beginPath();
+          cctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+          cctx.fill();
+        }
+        cctx.restore();
+      });
+      confettiPieces = confettiPieces.filter(p => p.life < 130 && p.y < window.innerHeight + 40);
+      if (confettiPieces.length > 0) {
+        confettiRAF = requestAnimationFrame(stepConfetti);
+      } else {
+        cctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+        confettiRAF = null;
+      }
+    }
+
+    function celebrate() {
+      launchConfetti();
+      display.classList.remove('cheer');
+      void display.offsetWidth;
+      display.classList.add('cheer');
+    }
+
     document.querySelectorAll('.key').forEach(btn => {
       btn.addEventListener('animationend', () => btn.classList.remove('pop'));
       btn.addEventListener('click', () => {
@@ -325,7 +421,7 @@
         else if (btn.dataset.op !== undefined) { playTap('op'); inputOperator(btn.dataset.op); }
         else if (btn.dataset.action === 'clear') { playTap('fn'); reset(); }
         else if (btn.dataset.action === 'back') { playTap('back'); backspace(); }
-        else if (btn.dataset.action === 'equals') { playHappy(); equals(); }
+        else if (btn.dataset.action === 'equals') { if (equals()) { playHappy(); celebrate(); } }
       });
     });
 
