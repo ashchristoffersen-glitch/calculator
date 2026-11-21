@@ -1033,6 +1033,7 @@
     const stats = loadStats();
     let streak = 0;  // current run (resets on wrong / mode change)
 
+    const LEVEL_ICONS = ['🥉', '🥈', '🥇', '🏅', '🎖️', '🎯', '🚀', '💎', '🌈', '👑'];
     const BADGES = [
       { id: 'total_10',     icon: '🌟', name: '10 Correct',        test: s => s.totalCorrect >= 10 },
       { id: 'total_50',     icon: '💫', name: '50 Correct',        test: s => s.totalCorrect >= 50 },
@@ -1043,8 +1044,11 @@
       { id: 'minus_star',   icon: '➖', name: 'Subtraction Star',  test: s => s.modeCorrect.minus >= 20 },
       { id: 'times_champ',  icon: '✖️', name: 'Times Champion',    test: s => s.modeCorrect.times >= 20 },
       { id: 'divide_hero',  icon: '➗', name: 'Division Hero',      test: s => s.modeCorrect.divide >= 20 },
-      { id: 'level5_champ', icon: '🎖️', name: 'Level 5 Champion',  test: s => (s.levelCorrect[5]  || 0) >= 10 },
-      { id: 'level10_champ',icon: '👑', name: 'Level 10 Champion', test: s => (s.levelCorrect[10] || 0) >= 10 }
+      // One trophy per level (10 correct answers at that level)
+      ...LEVEL_ICONS.map((icon, i) => ({
+        id: 'level' + (i + 1) + '_champ', icon: icon, name: 'Level ' + (i + 1) + ' Champion',
+        test: s => (s.levelCorrect[i + 1] || 0) >= 10
+      }))
     ];
 
     function updateHud(bump) {
